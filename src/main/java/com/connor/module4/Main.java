@@ -2,22 +2,22 @@ package com.connor.module4;
 
 import java.io.File;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class Main {
     public static void main(String[] args) {
 
-
         String TABLE_NAME = "BASEBALLSTATS";
         DatabaseHandler databaseHandler = new DatabaseHandler();
-        databaseHandler.createTable(TABLE_NAME);
-        File file = new File("PlayerData.csv");
+        File file = new File("OriginalPlayerData.csv");
+        ArrayList<String> headers = CSVHandler.parseCSVHeaders(file);
+        ArrayList<String> data = CSVHandler.parseCSVContents(file);
         try {
-            System.out.println(databaseHandler.importTableData(TABLE_NAME, CSVHandler.parseCSV(file)));
+            databaseHandler.createTable(TABLE_NAME);
+            System.out.println(databaseHandler.importTableData(TABLE_NAME, headers, data));
             databaseHandler.exportTableToCSV(TABLE_NAME, "out.csv");
         } catch (SQLException e) {
             e.printStackTrace();
         }
-//        CSVHandler.parseCSV(file);
-
     }
 }

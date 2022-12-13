@@ -2,28 +2,18 @@ package com.connor.module4;
 import java.io.FileWriter;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
+
 
 
 public class DatabaseHandler {
     private static final String DB_url = "jdbc:derby:database/forum;create=true";
     private static Connection conn = null;
     private static Statement stmt = null;
-    public static DatabaseHandler handler;
 
     public DatabaseHandler() {
         createConnection();
     }
 
-    public static DatabaseHandler getHandler(){
-        if(handler == null){
-            handler = new DatabaseHandler();
-            return handler;
-        }else{
-            return handler;
-        }
-    }
 
     /**
      *  Attempts to create a table the database with the specified parameters. Data stored in the headers must be strings in this case.
@@ -40,7 +30,7 @@ public class DatabaseHandler {
                 System.out.println("Table " + TABLE_NAME + " exists");
             } else {
                 String statement = "CREATE TABLE " + TABLE_NAME + "(\n" +
-                        "id varchar(200)" +
+                        "id varchar(200) PRIMARY KEY " +
                         ")";
                 System.out.println(statement);
                 stmt.execute(statement);
@@ -50,13 +40,51 @@ public class DatabaseHandler {
             throwables.printStackTrace();
         }
     }
+    /**
+     * This method imports table data into a database.
+     *
+     * @param TABLE_NAME The name of the table to be imported.
+     * @param headers An ArrayList of the headers for the table.
+     * @param data An ArrayList of the data for the table.
+     * @return A String indicating whether the import was successful or not.
+     * @throws SQLException If an error occurs while importing the data.
+     */
+    public String importTableData(String TABLE_NAME, ArrayList<String> headers, ArrayList<String> data) throws SQLException {
+        try {
+            createTable(TABLE_NAME);
+            for (String s : headers) {
+                createTableColumn(TABLE_NAME, s);
+            }
+            for(String s : data){
+                addData(TABLE_NAME, s);
+            }
+            return "Success";
+        } catch (SQLException e){
+            e.printStackTrace();
+            return "Exception caught.";
+        }
 
+    }
+
+    /**
+     * exports a table from a database to a CSV file.
+     *
+     * @param tableName The name of the table to be exported.
+     * @param fileName The name of the CSV file to be created.
+     */
     public void exportTableToCSV(String tableName, String fileName) {
         try {
             stmt = conn.createStatement();
             String query = "SELECT * FROM " + tableName;
             ResultSet rs = stmt.executeQuery(query);
             FileWriter fw = new FileWriter(fileName);
+            for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                fw.append(rs.getMetaData().getColumnName(i));
+                if (i < rs.getMetaData().getColumnCount()) {
+                    fw.append(",");
+                }
+            }
+            fw.append("\n");
             while (rs.next()) {
                 for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
                     fw.append(rs.getString(i));
@@ -72,6 +100,10 @@ public class DatabaseHandler {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Creates a connection to the database using the org.apache.derby.jdbc.ClientDriver.
+     */
     private void createConnection() {
         try {
             Class.forName("org.apache.derby.jdbc.ClientDriver");
@@ -81,6 +113,14 @@ public class DatabaseHandler {
         }
     }
 
+    /**
+     * Creates a new column in the specified table.
+     *
+     * @param TABLE_NAME the name of the table to add the column to
+     * @param COLUMN_NAME the name of the column to add
+     * @throws SQLException if an error occurs while creating the column
+
+     */
     private void createTableColumn(String TABLE_NAME, String COLUMN_NAME) throws SQLException {
         COLUMN_NAME = COLUMN_NAME.toUpperCase();
         DatabaseMetaData metaData = conn.getMetaData();
@@ -97,61 +137,22 @@ public class DatabaseHandler {
 
     }
 
+    /**
+     * Adds data to the specified table.
+     *
+     * @param TABLE_NAME the name of the table to add the data to
+     * @param data the data to add to the table
+     * @throws SQLException if an error occurs while adding the data
+     */
     private void addData(String TABLE_NAME, String data) throws SQLException {
             String statement = "INSERT INTO " + TABLE_NAME + " VALUES " + "(" + data + ")";
             System.out.println(statement);
             stmt.execute(statement);
-
-    }
-
-    public String importTableData(String TABLE_NAME, HashMap<String, ArrayList<String>> dataMap) throws SQLException {
-        try {
-            createTable(TABLE_NAME);
-            stmt = conn.createStatement();
-            DatabaseMetaData dmn = conn.getMetaData();
-            for (String s : dataMap.keySet()) {
-                createTableColumn(TABLE_NAME, s);
-            }
-            for(String s : buildData(dataMap)){
-                addData(TABLE_NAME, s);
-            }
-            return "Success";
-        } catch (SQLException e){
-            e.printStackTrace();
-            return "Exception caught.";
-        }
-
     }
 
 
-    public static String setToString(Set<String> list) {
-        StringBuilder sb = new StringBuilder();
-        for (String s : list) {
-            sb.append(s);
-            sb.append(",");
-        }
-        return sb.substring(0, sb.length() - 1);
-    }
-    public ArrayList<String> buildData(HashMap<String, ArrayList<String>> dataMap) {
-       int counter = 0;
-        ArrayList<String> toReturn = new ArrayList<>();
-        for(String s : dataMap.keySet()){
-           counter = Math.max(dataMap.get(s).size(), counter);
-       }
-        while(counter > 0){
-            counter--;
-            StringBuilder tempString = new StringBuilder();
-            tempString.append("'").append(counter).append("',");
-            System.out.println(dataMap.keySet());
-            for(String s : dataMap.keySet()){
 
-                tempString.append("'").append(dataMap.get(s).get(counter)).append("',");
-            }
-            toReturn.add(tempString.deleteCharAt(tempString.length() - 1).toString());
 
-        }
-        return toReturn;
-    }
     public boolean execAction(String qu) {
         try {
             stmt = conn.createStatement();
